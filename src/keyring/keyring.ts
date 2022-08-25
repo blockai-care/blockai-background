@@ -1,4 +1,7 @@
 import { Crypto, KeyStore } from './crypto';
+import elliptic from "elliptic";
+import { sha256 } from 'js-sha256';
+import * as secp256k1 from 'secp256k1';
 import {
   Mnemonic,
   PrivKeySecp256k1,
@@ -10,7 +13,8 @@ import {
   ecsign,
   keccak,
   publicToAddress,
-  toBuffer
+  toBuffer,
+  toRpcSig
 } from 'ethereumjs-util';
 import { rawEncode, soliditySHA3 } from 'ethereumjs-abi';
 import { intToHex, isHexString, stripHexPrefix } from 'ethjs-util';
@@ -40,6 +44,7 @@ import Common from '@ethereumjs/common';
 import { TransactionOptions, Transaction } from 'ethereumjs-tx';
 import { request } from '../tx';
 import { TYPED_MESSAGE_SCHEMA } from './constants';
+import * as crypto from "crypto";
 
 export enum KeyRingStatus {
   NOTLOADED,
@@ -217,8 +222,8 @@ export class KeyRing {
 
     return this.keyStore.coinTypeForChain
       ? this.keyStore.coinTypeForChain[
-          ChainIdHelper.parse(chainId).identifier
-        ] ?? defaultCoinType
+      ChainIdHelper.parse(chainId).identifier
+      ] ?? defaultCoinType
       : defaultCoinType;
   }
 
@@ -465,7 +470,7 @@ export class KeyRing {
     return (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     );
   }
@@ -478,7 +483,7 @@ export class KeyRing {
     if (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     ) {
       throw new Error('Coin type already set');
@@ -895,6 +900,43 @@ export class KeyRing {
     };
   }
 
+  public async signEthereumArbitrary(
+    chainId: string,
+    message: object
+  ): Promise<object> {
+    try {
+      if (this.status !== KeyRingStatus.UNLOCKED) {
+        throw new Error('Key ring is not unlocked');
+      }
+
+      if (!this.keyStore) {
+        throw new Error('Key Store is empty');
+      }
+
+      const coinType = this.computeKeyStoreCoinType(chainId, 60);
+      if (coinType !== 60) {
+        throw new Error(
+          'Invalid coin type passed in to Ethereum signing (expected 60)'
+        );
+      }
+
+      const privateKey = this.loadPrivKey(coinType).toBytes();
+      const msgHash = crypto.createHash('sha256').update(Buffer.from(JSON.stringify({ nonce: (message as any)?.nonce }))).digest();
+      const signature = ecsign(msgHash, Buffer.from(privateKey));
+      const ethWallet = new Wallet(privateKey);
+      const pubKeyHex = ethWallet.publicKey.slice(2);
+
+      const signatureHex = Buffer.from([...signature.r].concat([...signature.s]));
+
+      return {
+        signature: signatureHex.toString('base64'),
+        pub_key: Buffer.from(pubKeyHex, 'hex').toString('base64')
+      };
+    } catch (error) {
+      console.log(error, "ERROR ON ETHEREUM ARBITRARY")
+    }
+  }
+
   public async getPublicKey(chainId: string): Promise<string> {
     if (this.status !== KeyRingStatus.UNLOCKED) {
       throw new Error('Key ring is not unlocked');
@@ -944,9 +986,9 @@ export class KeyRing {
         version === SignTypedDataVersion.V1
           ? this._typedSignatureHash(typedMessage as TypedDataV1)
           : this.eip712Hash(
-              typedMessage as TypedMessage<T>,
-              version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
-            );
+            typedMessage as TypedMessage<T>,
+            version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
+          );
       console.log(
         '🚀 ~ file: keyring.ts ~ line 868 ~ KeyRing ~ messageHash',
         messageHash
@@ -1415,7 +1457,7 @@ export class KeyRing {
         bip44HDPath: keyStore.bip44HDPath,
         selected: this.keyStore
           ? KeyRing.getKeyStoreId(keyStore) ===
-            KeyRing.getKeyStoreId(this.keyStore)
+          KeyRing.getKeyStoreId(this.keyStore)
           : false
       });
     }

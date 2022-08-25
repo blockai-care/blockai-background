@@ -27,7 +27,8 @@ import {
   RequestSignProxyReEncryptionDataMsg,
   RequestSignProxyDecryptionDataMsg,
   RequestPublicKeyMsg,
-  ChangeChainMsg
+  ChangeChainMsg,
+  RequestSignEthereumArbitraryMsg
 } from './messages';
 import { KeyRingService } from './service';
 import { Bech32Address, cosmos } from '@owallet/cosmos';
@@ -116,6 +117,11 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as RequestSignProxyReEncryptionDataMsg
         );
+      case RequestSignEthereumArbitraryMsg:
+        return handleRequestSignEthereumArbitrary(service)(
+          env,
+          msg as RequestSignEthereumArbitraryMsg
+        );
       case GetMultiKeyStoreInfoMsg:
         return handleGetMultiKeyStoreInfoMsg(service)(
           env,
@@ -140,8 +146,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as ExportKeyRingDatasMsg
         );
-      case ChangeChainMsg:
-        return handleChangeChainMsg(service)(env, msg as ChangeChainMsg);
+      // case ChangeChainMsg:
+      //   return handleChangeChainMsg(service)(env, msg as ChangeChainMsg);
       default:
         throw new Error('Unknown msg type');
     }
@@ -438,6 +444,19 @@ const handleRequestSignProxyReEncryptionData: (
   };
 };
 
+const handleRequestSignEthereumArbitrary: (
+  service: KeyRingService
+) => InternalHandler<RequestSignEthereumArbitraryMsg> = (service) => {
+  return async (env, msg) => {
+    const response = await service.requestSignEthereumArbitrary(
+      env,
+      msg.chainId,
+      msg.data
+    );
+    return { result: JSON.stringify(response) };
+  };
+};
+
 const handleRequestSignEthereumMsg: (
   service: KeyRingService
 ) => InternalHandler<RequestSignEthereumMsg> = (service) => {
@@ -486,14 +505,14 @@ const handleChangeKeyRingMsg: (
   };
 };
 
-const handleChangeChainMsg: (
-  service: KeyRingService
-) => InternalHandler<ChangeChainMsg> = (service) => {
-  return async (_, msg) => {
-    console.log('handleChangeChainMsg handler keyring', msg);
-    return await service.changeChain(msg.chainInfos);
-  };
-};
+// const handleChangeChainMsg: (
+//   service: KeyRingService
+// ) => InternalHandler<ChangeChainMsg> = (service) => {
+//   return async (_, msg) => {
+//     console.log('handleChangeChainMsg handler keyring', msg);
+//     return await service.changeChain(msg.chainInfos);
+//   };
+// };
 
 const handleGetIsKeyStoreCoinTypeSetMsg: (
   service: KeyRingService

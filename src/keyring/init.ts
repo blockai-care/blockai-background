@@ -27,7 +27,8 @@ import {
   RequestSignProxyReEncryptionDataMsg,
   RequestSignProxyDecryptionDataMsg,
   RequestPublicKeyMsg,
-  ChangeChainMsg
+  ChangeChainMsg,
+  RequestSignEthereumArbitraryMsg
 } from './messages';
 import { ROUTE } from './constants';
 import { getHandler } from './handler';
@@ -52,6 +53,7 @@ export function init(router: Router, service: KeyRingService): void {
   router.registerMessage(RequestSignDirectMsg);
   router.registerMessage(RequestSignEthereumMsg);
   router.registerMessage(RequestSignEthereumTypedDataMsg);
+  router.registerMessage(RequestSignEthereumArbitraryMsg);
   // thang3
   router.registerMessage(RequestPublicKeyMsg);
   router.registerMessage(RequestSignProxyDecryptionDataMsg);
