@@ -921,7 +921,7 @@ export class KeyRing {
       }
 
       const privateKey = this.loadPrivKey(coinType).toBytes();
-      const msgHash = crypto.createHash('sha256').update(Buffer.from(JSON.stringify({ nonce: (message as any)?.nonce }))).digest();
+      const msgHash = crypto.createHash('sha256').update(Buffer.from(JSON.stringify({ nonce: (message as any)?.data?.nonce }))).digest();
       const signature = ecsign(msgHash, Buffer.from(privateKey));
       const ethWallet = new Wallet(privateKey);
       const pubKeyHex = ethWallet.publicKey.slice(2);
