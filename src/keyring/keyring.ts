@@ -2,6 +2,7 @@ import { Crypto, KeyStore } from './crypto';
 import elliptic from "elliptic";
 import { sha256 } from 'js-sha256';
 import * as secp256k1 from 'secp256k1';
+import eccrypto from 'eccrypto';
 import {
   Mnemonic,
   PrivKeySecp256k1,
@@ -35,7 +36,6 @@ import { ChainInfo } from '@owallet/types';
 import { Env, OWalletError } from '@owallet/router';
 import { Buffer } from 'buffer';
 import { ChainIdHelper } from '@owallet/cosmos';
-import PRE from 'proxy-recrypt-js';
 import { Wallet } from '@ethersproject/wallet';
 import * as BytesUtils from '@ethersproject/bytes';
 import { ETH } from '@tharsis/address-converter';
@@ -856,29 +856,33 @@ export class KeyRing {
     }
   }
 
-  public async signProxyDecryptionData(
+  public async signDecryptData(
     chainId: string,
     message: object
   ): Promise<object> {
-    if (this.status !== KeyRingStatus.UNLOCKED) {
-      throw new Error('Key ring is not unlocked');
+    try {
+      const privKey = this.loadPrivKey(60);
+      const privKeyBuffer = Buffer.from(privKey.toBytes());
+      let encryptedData = message[0];
+      encryptedData = {
+        ciphertext: Buffer.from(encryptedData.ciphertext, 'hex'),
+        ephemPublicKey: Buffer.from(encryptedData.ephemPublicKey, 'hex'),
+        iv: Buffer.from(encryptedData.iv, 'hex'),
+        mac: Buffer.from(encryptedData.mac, 'hex')
+      };
+      const data = await eccrypto.decrypt(privKeyBuffer, encryptedData);
+      return {
+        data
+      };
+    } catch (error) {
+      return {
+        error: error.message
+      };
     }
-
-    if (!this.keyStore) {
-      throw new Error('Key Store is empty');
-    }
-
-    const privKey = this.loadPrivKey(60);
-    const ethWallet = new Wallet(privKey.toBytes());
-    const privKeyHex = ethWallet.privateKey.slice(2);
-    const decryptedData = PRE.decryptData(privKeyHex, message[0]);
-    return {
-      decryptedData
-    };
   }
 
   // thang7
-  public async signProxyReEncryptionData(
+  public async signReEncryptData(
     chainId: string,
     message: object
   ): Promise<object> {
@@ -889,15 +893,31 @@ export class KeyRing {
     if (!this.keyStore) {
       throw new Error('Key Store is empty');
     }
+    try {
+      const privKey = this.loadPrivKey(60);
+      const privKeyBuffer = Buffer.from(privKey.toBytes());
+      let encryptedData = message[0];
+      const publicKey = message[1];
+      encryptedData = {
+        ciphertext: Buffer.from(encryptedData.ciphertext, 'hex'),
+        ephemPublicKey: Buffer.from(encryptedData.ephemPublicKey, 'hex'),
+        iv: Buffer.from(encryptedData.iv, 'hex'),
+        mac: Buffer.from(encryptedData.mac, 'hex')
+      };
+      const data = await eccrypto.decrypt(privKeyBuffer, encryptedData);
+      const reEncryptedData = await eccrypto.encrypt(
+        Buffer.from(`${publicKey}`, 'hex'),
+        Buffer.from(data.toString(), 'utf-8')
+      );
 
-    const privKey = this.loadPrivKey(60);
-    const ethWallet = new Wallet(privKey.toBytes());
-    const privKeyHex = ethWallet.privateKey.slice(2);
-    const rk = PRE.generateReEncrytionKey(privKeyHex, message[0]);
-
-    return {
-      rk
-    };
+      return {
+        data: reEncryptedData
+      };
+    } catch (error) {
+      return {
+        error: error.message
+      };
+    }
   }
 
   public async signEthereumArbitrary(

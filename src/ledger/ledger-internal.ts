@@ -124,6 +124,7 @@ export class LedgerInternal {
 
     const { signature } = await this.cosmosApp.sign(
       typeof path === 'string' ? fromString(path).toPathArray() : path,
+      // @ts-ignore
       message
     );
 
