@@ -541,7 +541,7 @@ export class KeyRingService {
       )) as any;
       const response = await this.keyRing.signEthereumArbitrary(
         chainId,
-        approveData
+        data
       );
 
       return response;

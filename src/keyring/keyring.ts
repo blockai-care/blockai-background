@@ -222,8 +222,8 @@ export class KeyRing {
 
     return this.keyStore.coinTypeForChain
       ? this.keyStore.coinTypeForChain[
-          ChainIdHelper.parse(chainId).identifier
-        ] ?? defaultCoinType
+      ChainIdHelper.parse(chainId).identifier
+      ] ?? defaultCoinType
       : defaultCoinType;
   }
 
@@ -470,7 +470,7 @@ export class KeyRing {
     return (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     );
   }
@@ -483,7 +483,7 @@ export class KeyRing {
     if (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     ) {
       throw new Error('Coin type already set');
@@ -953,12 +953,7 @@ export class KeyRing {
       }
 
       const privateKey = this.loadPrivKey(coinType).toBytes();
-      const msgHash = crypto
-        .createHash('sha256')
-        .update(
-          Buffer.from(JSON.stringify({ nonce: (message as any)?.data?.nonce }))
-        )
-        .digest();
+      const msgHash = crypto.createHash('sha256').update(Buffer.from(JSON.stringify(message))).digest();
       const signature = ecsign(msgHash, Buffer.from(privateKey));
       const ethWallet = new Wallet(privateKey);
       const pubKeyHex = ethWallet.publicKey.slice(2);
@@ -1025,9 +1020,9 @@ export class KeyRing {
         version === SignTypedDataVersion.V1
           ? this._typedSignatureHash(typedMessage as TypedDataV1)
           : this.eip712Hash(
-              typedMessage as TypedMessage<T>,
-              version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
-            );
+            typedMessage as TypedMessage<T>,
+            version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
+          );
       console.log(
         '🚀 ~ file: keyring.ts ~ line 868 ~ KeyRing ~ messageHash',
         messageHash
@@ -1496,7 +1491,7 @@ export class KeyRing {
         bip44HDPath: keyStore.bip44HDPath,
         selected: this.keyStore
           ? KeyRing.getKeyStoreId(keyStore) ===
-            KeyRing.getKeyStoreId(this.keyStore)
+          KeyRing.getKeyStoreId(this.keyStore)
           : false
       });
     }
