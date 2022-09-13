@@ -917,7 +917,8 @@ export class KeyRing {
           ).toString('hex');
           return {
             ...reEncryptedData,
-            address
+            address,
+            role: data.role
           };
         })
       );
