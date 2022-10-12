@@ -456,7 +456,7 @@ export class KeyRingService {
     }
   }
 
-  async requestSignProxyDecryptionData(
+  async requestSignDecryptData(
     env: Env,
     chainId: string,
     data: object
@@ -471,10 +471,7 @@ export class KeyRingService {
         rpc,
         data
       );
-      const rawTxHex = await this.keyRing.signProxyDecryptionData(
-        chainId,
-        newData
-      );
+      const rawTxHex = await this.keyRing.signDecryptData(chainId, newData);
 
       return rawTxHex;
     } catch (e) {
@@ -489,7 +486,7 @@ export class KeyRingService {
   }
 
   // thang6
-  async requestSignProxyReEncryptionData(
+  async requestSignReEncryptData(
     env: Env,
     chainId: string,
     data: object
@@ -504,7 +501,7 @@ export class KeyRingService {
         rpc,
         data
       );
-      const rawTxHex = await this.keyRing.signProxyReEncryptionData(
+      const rawTxHex = await this.keyRing.signReEncryptData(
         chainId,
         newData
       );
