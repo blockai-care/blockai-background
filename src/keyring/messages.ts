@@ -760,7 +760,7 @@ export class RequestPublicKeyMsg extends Message<{
   }
 }
 
-export class RequestSignProxyDecryptionDataMsg extends Message<{
+export class RequestSignDecryptDataMsg extends Message<{
   readonly result: string; // raw tx signature to broadcast
 }> {
   public static type() {
@@ -797,15 +797,15 @@ export class RequestSignProxyDecryptionDataMsg extends Message<{
   }
 
   type(): string {
-    return RequestSignProxyDecryptionDataMsg.type();
+    return RequestSignDecryptDataMsg.type();
   }
 }
 
-export class RequestSignProxyReEncryptionDataMsg extends Message<{
+export class RequestSignEthereumArbitraryMsg extends Message<{
   readonly result: string; // raw tx signature to broadcast
 }> {
   public static type() {
-    return 'request-sign-proxy-re-encryption-data';
+    return 'request-sign-ethereum-arbitrary';
   }
 
   constructor(
@@ -838,7 +838,48 @@ export class RequestSignProxyReEncryptionDataMsg extends Message<{
   }
 
   type(): string {
-    return RequestSignProxyReEncryptionDataMsg.type();
+    return RequestSignEthereumArbitraryMsg.type();
+  }
+}
+
+export class RequestSignReEncryptDataMsg extends Message<{
+  readonly result: string; // raw tx signature to broadcast
+}> {
+  public static type() {
+    return 'request-sign-re-encrypt-data';
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly data: object // public readonly signOptions: OWalletSignOptions = {}
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new OWalletError('keyring', 270, 'chain id not set');
+    }
+
+    if (!this.data) {
+      throw new OWalletError('keyring', 231, 'data not set');
+    }
+
+    // if (!this.signOptions) {
+    //   throw new Error('Sign options are null');
+    // }
+  }
+
+  approveExternal(): boolean {
+    return true;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return RequestSignReEncryptDataMsg.type();
   }
 }
 

@@ -456,7 +456,7 @@ export class KeyRingService {
     }
   }
 
-  async requestSignProxyDecryptionData(
+  async requestSignDecryptData(
     env: Env,
     chainId: string,
     data: object
@@ -471,7 +471,37 @@ export class KeyRingService {
         rpc,
         data
       );
-      const rawTxHex = await this.keyRing.signProxyDecryptionData(
+      const rawTxHex = await this.keyRing.signDecryptData(chainId, newData);
+
+      return rawTxHex;
+    } catch (e) {
+      console.log('e', e.message);
+    } finally {
+      this.interactionService.dispatchEvent(
+        APP_PORT,
+        'request-sign-ethereum-end',
+        {}
+      );
+    }
+  }
+
+  // thang6
+  async requestSignReEncryptData(
+    env: Env,
+    chainId: string,
+    data: object
+  ): Promise<object> {
+    console.log('in request sign proxy re-encryption data: ', chainId);
+
+    try {
+      const rpc = (await this.chainsService.getChainInfo(chainId)).rest;
+      const newData = await this.estimateFeeAndWaitApprove(
+        env,
+        chainId,
+        rpc,
+        data
+      );
+      const rawTxHex = await this.keyRing.signReEncryptData(
         chainId,
         newData
       );
@@ -488,28 +518,30 @@ export class KeyRingService {
     }
   }
 
-  // thang6
-  async requestSignProxyReEncryptionData(
+  async requestSignEthereumArbitrary(
     env: Env,
     chainId: string,
     data: object
   ): Promise<object> {
-    console.log('in request sign proxy re-encryption data: ', chainId);
-
+    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data);
     try {
-      const rpc = (await this.chainsService.getChainInfo(chainId)).rest;
-      const newData = await this.estimateFeeAndWaitApprove(
+      const approveData = (await this.interactionService.waitApprove(
         env,
+        '/sign-ethereum-arbitrary',
+        'request-sign-ethereum',
+        {
+          env,
+          chainId,
+          mode: 'direct',
+          data
+        }
+      )) as any;
+      const response = await this.keyRing.signEthereumArbitrary(
         chainId,
-        rpc,
         data
       );
-      const rawTxHex = await this.keyRing.signProxyReEncryptionData(
-        chainId,
-        newData
-      );
 
-      return rawTxHex;
+      return response;
     } catch (e) {
       console.log('e', e.message);
     } finally {

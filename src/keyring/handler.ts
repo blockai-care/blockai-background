@@ -24,10 +24,11 @@ import {
   RequestVerifyADR36AminoSignDoc,
   RequestSignEthereumMsg,
   RequestSignEthereumTypedDataMsg,
-  RequestSignProxyReEncryptionDataMsg,
-  RequestSignProxyDecryptionDataMsg,
+  RequestSignReEncryptDataMsg,
+  RequestSignDecryptDataMsg,
   RequestPublicKeyMsg,
-  ChangeChainMsg
+  ChangeChainMsg,
+  RequestSignEthereumArbitraryMsg
 } from './messages';
 import { KeyRingService } from './service';
 import { Bech32Address, cosmos } from '@owallet/cosmos';
@@ -105,16 +106,21 @@ export const getHandler: (service: KeyRingService) => Handler = (
         );
       case RequestPublicKeyMsg:
         return handleRequestPublicKey(service)(env, msg as RequestPublicKeyMsg);
-      case RequestSignProxyDecryptionDataMsg:
+      case RequestSignDecryptDataMsg:
         return handleRequestSignProxyDecryptionData(service)(
           env,
-          msg as RequestSignProxyDecryptionDataMsg
+          msg as RequestSignDecryptDataMsg
         );
       // thang4
-      case RequestSignProxyReEncryptionDataMsg:
-        return handleRequestSignProxyReEncryptionData(service)(
+      case RequestSignReEncryptDataMsg:
+        return handleRequestSignReEncryptData(service)(
           env,
-          msg as RequestSignProxyReEncryptionDataMsg
+          msg as RequestSignReEncryptDataMsg
+        );
+      case RequestSignEthereumArbitraryMsg:
+        return handleRequestSignEthereumArbitrary(service)(
+          env,
+          msg as RequestSignEthereumArbitraryMsg
         );
       case GetMultiKeyStoreInfoMsg:
         return handleGetMultiKeyStoreInfoMsg(service)(
@@ -140,8 +146,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as ExportKeyRingDatasMsg
         );
-      case ChangeChainMsg:
-        return handleChangeChainMsg(service)(env, msg as ChangeChainMsg);
+      // case ChangeChainMsg:
+      //   return handleChangeChainMsg(service)(env, msg as ChangeChainMsg);
       default:
         throw new Error('Unknown msg type');
     }
@@ -411,9 +417,9 @@ const handleRequestPublicKey: (
 
 const handleRequestSignProxyDecryptionData: (
   service: KeyRingService
-) => InternalHandler<RequestSignProxyDecryptionDataMsg> = service => {
+) => InternalHandler<RequestSignDecryptDataMsg> = (service) => {
   return async (env, msg) => {
-    const response = await service.requestSignProxyDecryptionData(
+    const response = await service.requestSignDecryptData(
       env,
       msg.chainId,
       msg.data
@@ -424,16 +430,29 @@ const handleRequestSignProxyDecryptionData: (
 };
 
 // thang5
-const handleRequestSignProxyReEncryptionData: (
+const handleRequestSignReEncryptData: (
   service: KeyRingService
-) => InternalHandler<RequestSignProxyReEncryptionDataMsg> = service => {
+) => InternalHandler<RequestSignReEncryptDataMsg> = (service) => {
   return async (env, msg) => {
-    const response = await service.requestSignProxyReEncryptionData(
+    const response = await service.requestSignReEncryptData(
       env,
       msg.chainId,
       msg.data
     );
     console.log(response, 'RESPONSE SIGN HERE');
+    return { result: JSON.stringify(response) };
+  };
+};
+
+const handleRequestSignEthereumArbitrary: (
+  service: KeyRingService
+) => InternalHandler<RequestSignEthereumArbitraryMsg> = (service) => {
+  return async (env, msg) => {
+    const response = await service.requestSignEthereumArbitrary(
+      env,
+      msg.chainId,
+      msg.data
+    );
     return { result: JSON.stringify(response) };
   };
 };

@@ -1,4 +1,8 @@
 import { Crypto, KeyStore } from './crypto';
+import elliptic from 'elliptic';
+import { sha256 } from 'js-sha256';
+import * as secp256k1 from 'secp256k1';
+import eccrypto from 'eccrypto';
 import {
   Mnemonic,
   PrivKeySecp256k1,
@@ -10,7 +14,8 @@ import {
   ecsign,
   keccak,
   publicToAddress,
-  toBuffer
+  toBuffer,
+  toRpcSig
 } from 'ethereumjs-util';
 
 import { rawEncode, soliditySHA3 } from 'ethereumjs-abi';
@@ -32,7 +37,6 @@ import { ChainInfo } from '@owallet/types';
 import { Env, OWalletError } from '@owallet/router';
 import { Buffer } from 'buffer';
 import { ChainIdHelper } from '@owallet/cosmos';
-import PRE from 'proxy-recrypt-js';
 import { Wallet } from '@ethersproject/wallet';
 import * as BytesUtils from '@ethersproject/bytes';
 import { ETH } from '@tharsis/address-converter';
@@ -41,6 +45,7 @@ import Common from '@ethereumjs/common';
 import { TransactionOptions, Transaction } from 'ethereumjs-tx';
 import { request } from '../tx';
 import { TYPED_MESSAGE_SCHEMA } from './constants';
+import * as crypto from 'crypto';
 
 export enum KeyRingStatus {
   NOTLOADED,
@@ -218,8 +223,8 @@ export class KeyRing {
 
     return this.keyStore.coinTypeForChain
       ? this.keyStore.coinTypeForChain[
-          ChainIdHelper.parse(chainId).identifier
-        ] ?? defaultCoinType
+      ChainIdHelper.parse(chainId).identifier
+      ] ?? defaultCoinType
       : defaultCoinType;
   }
 
@@ -466,7 +471,7 @@ export class KeyRing {
     return (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     );
   }
@@ -479,7 +484,7 @@ export class KeyRing {
     if (
       this.keyStore.coinTypeForChain &&
       this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
+      ChainIdHelper.parse(chainId).identifier
       ] !== undefined
     ) {
       throw new Error('Coin type already set');
@@ -490,7 +495,7 @@ export class KeyRing {
       [ChainIdHelper.parse(chainId).identifier]: coinType
     };
 
-    const keyStoreInMulti = this.multiKeyStore.find(keyStore => {
+    const keyStoreInMulti = this.multiKeyStore.find((keyStore) => {
       return (
         KeyRing.getKeyStoreId(keyStore) ===
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -855,29 +860,33 @@ export class KeyRing {
     }
   }
 
-  public async signProxyDecryptionData(
+  public async signDecryptData(
     chainId: string,
     message: object
   ): Promise<object> {
-    if (this.status !== KeyRingStatus.UNLOCKED) {
-      throw new Error('Key ring is not unlocked');
+    try {
+      const privKey = this.loadPrivKey(60);
+      const privKeyBuffer = Buffer.from(privKey.toBytes());
+      let encryptedData = message[0];
+      encryptedData = {
+        ciphertext: Buffer.from(encryptedData.ciphertext, 'hex'),
+        ephemPublicKey: Buffer.from(encryptedData.ephemPublicKey, 'hex'),
+        iv: Buffer.from(encryptedData.iv, 'hex'),
+        mac: Buffer.from(encryptedData.mac, 'hex')
+      };
+      const data = await eccrypto.decrypt(privKeyBuffer, encryptedData);
+      return {
+        data
+      };
+    } catch (error) {
+      return {
+        error: error.message
+      };
     }
-
-    if (!this.keyStore) {
-      throw new Error('Key Store is empty');
-    }
-
-    const privKey = this.loadPrivKey(60);
-    const ethWallet = new Wallet(privKey.toBytes());
-    const privKeyHex = ethWallet.privateKey.slice(2);
-    const decryptedData = PRE.decryptData(privKeyHex, message[0]);
-    return {
-      decryptedData
-    };
   }
 
   // thang7
-  public async signProxyReEncryptionData(
+  public async signReEncryptData(
     chainId: string,
     message: object
   ): Promise<object> {
@@ -888,15 +897,83 @@ export class KeyRing {
     if (!this.keyStore) {
       throw new Error('Key Store is empty');
     }
+    try {
+      const privKey = this.loadPrivKey(60);
+      const privKeyBuffer = Buffer.from(privKey.toBytes());
+      const response = await Promise.all(
+        message[0].map(async (data) => {
+          const encryptedData = {
+            ciphertext: Buffer.from(data.ciphertext, 'hex'),
+            ephemPublicKey: Buffer.from(data.ephemPublicKey, 'hex'),
+            iv: Buffer.from(data.iv, 'hex'),
+            mac: Buffer.from(data.mac, 'hex')
+          };
+          const decryptedData = await eccrypto.decrypt(
+            privKeyBuffer,
+            encryptedData
+          );
+          const reEncryptedData = await eccrypto.encrypt(
+            Buffer.from(data.publicKey, 'hex'),
+            Buffer.from(decryptedData.toString(), 'utf-8')
+          );
+          const address = Buffer.from(
+            publicToAddress(Buffer.from(data.publicKey, 'hex'), true)
+          ).toString('hex');
+          return {
+            ...reEncryptedData,
+            address,
+            role: data.role
+          };
+        })
+      );
 
-    const privKey = this.loadPrivKey(60);
-    const ethWallet = new Wallet(privKey.toBytes());
-    const privKeyHex = ethWallet.privateKey.slice(2);
-    const rk = PRE.generateReEncrytionKey(privKeyHex, message[0]);
+      return {
+        data: response
+      };
+    } catch (error) {
+      return {
+        error: error.message
+      };
+    }
+  }
 
-    return {
-      rk
-    };
+  public async signEthereumArbitrary(
+    chainId: string,
+    message: object
+  ): Promise<object> {
+    try {
+      if (this.status !== KeyRingStatus.UNLOCKED) {
+        throw new Error('Key ring is not unlocked');
+      }
+
+      if (!this.keyStore) {
+        throw new Error('Key Store is empty');
+      }
+
+      const coinType = this.computeKeyStoreCoinType(chainId, 60);
+      if (coinType !== 60) {
+        throw new Error(
+          'Invalid coin type passed in to Ethereum signing (expected 60)'
+        );
+      }
+
+      const privateKey = this.loadPrivKey(coinType).toBytes();
+      const msgHash = crypto.createHash('sha256').update(Buffer.from(JSON.stringify(message))).digest();
+      const signature = ecsign(msgHash, Buffer.from(privateKey));
+      const ethWallet = new Wallet(privateKey);
+      const pubKeyHex = ethWallet.publicKey.slice(2);
+
+      const signatureHex = Buffer.from(
+        [...signature.r].concat([...signature.s])
+      );
+
+      return {
+        signature: signatureHex.toString('base64'),
+        pub_key: Buffer.from(pubKeyHex, 'hex').toString('base64')
+      };
+    } catch (error) {
+      console.log(error, 'ERROR ON ETHEREUM ARBITRARY');
+    }
   }
 
   public async getPublicKey(chainId: string): Promise<string> {
@@ -948,9 +1025,9 @@ export class KeyRing {
         version === SignTypedDataVersion.V1
           ? this._typedSignatureHash(typedMessage as TypedDataV1)
           : this.eip712Hash(
-              typedMessage as TypedMessage<T>,
-              version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
-            );
+            typedMessage as TypedMessage<T>,
+            version as SignTypedDataVersion.V3 | SignTypedDataVersion.V4
+          );
       console.log(
         '🚀 ~ file: keyring.ts ~ line 868 ~ KeyRing ~ messageHash',
         messageHash
@@ -1155,7 +1232,7 @@ export class KeyRing {
         );
       }
       const parsedType = type.slice(0, type.lastIndexOf('['));
-      const typeValuePairs = value.map(item =>
+      const typeValuePairs = value.map((item) =>
         this.encodeField(types, name, parsedType, item, version)
       );
       return [
@@ -1419,7 +1496,7 @@ export class KeyRing {
         bip44HDPath: keyStore.bip44HDPath,
         selected: this.keyStore
           ? KeyRing.getKeyStoreId(keyStore) ===
-            KeyRing.getKeyStoreId(this.keyStore)
+          KeyRing.getKeyStoreId(this.keyStore)
           : false
       });
     }

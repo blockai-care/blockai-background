@@ -24,10 +24,11 @@ import {
   RequestVerifyADR36AminoSignDoc,
   RequestSignEthereumMsg,
   RequestSignEthereumTypedDataMsg,
-  RequestSignProxyReEncryptionDataMsg,
-  RequestSignProxyDecryptionDataMsg,
+  RequestSignReEncryptDataMsg,
+  RequestSignDecryptDataMsg,
   RequestPublicKeyMsg,
-  ChangeChainMsg
+  ChangeChainMsg,
+  RequestSignEthereumArbitraryMsg
 } from './messages';
 import { ROUTE } from './constants';
 import { getHandler } from './handler';
@@ -52,10 +53,11 @@ export function init(router: Router, service: KeyRingService): void {
   router.registerMessage(RequestSignDirectMsg);
   router.registerMessage(RequestSignEthereumMsg);
   router.registerMessage(RequestSignEthereumTypedDataMsg);
+  router.registerMessage(RequestSignEthereumArbitraryMsg);
   // thang3
   router.registerMessage(RequestPublicKeyMsg);
-  router.registerMessage(RequestSignProxyDecryptionDataMsg);
-  router.registerMessage(RequestSignProxyReEncryptionDataMsg);
+  router.registerMessage(RequestSignDecryptDataMsg);
+  router.registerMessage(RequestSignReEncryptDataMsg);
   router.registerMessage(GetMultiKeyStoreInfoMsg);
   router.registerMessage(ChangeKeyRingMsg);
   router.registerMessage(GetIsKeyStoreCoinTypeSetMsg);
