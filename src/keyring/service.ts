@@ -556,6 +556,41 @@ export class KeyRingService {
     }
   }
 
+  async requestSignWithEddsaPrivKey(
+    env: Env,
+    chainId: string,
+    data: object
+  ): Promise<object> {
+    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data);
+    try {
+      const approveData = (await this.interactionService.waitApprove(
+        env,
+        '/sign-ethereum-arbitrary',
+        'request-sign-ethereum',
+        {
+          env,
+          chainId,
+          mode: 'direct',
+          data
+        }
+      )) as any;
+      const response = await this.keyRing.signWithEddsaPrivKey(
+        chainId,
+        data
+      );
+
+      return response;
+    } catch (e) {
+      console.log('e', e.message);
+    } finally {
+      this.interactionService.dispatchEvent(
+        APP_PORT,
+        'request-sign-ethereum-end',
+        {}
+      );
+    }
+  }
+
   async estimateFeeAndWaitApprove(
     env: Env,
     chainId: string,

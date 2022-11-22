@@ -1,7 +1,8 @@
 import { Crypto, KeyStore } from './crypto';
 import elliptic from 'elliptic';
-import { sha256 } from 'js-sha256';
 import * as secp256k1 from 'secp256k1';
+import { buildEddsa, buildBabyjub } from "circomlibjs";
+import sha256 from "sha256";
 import eccrypto from 'eccrypto';
 import {
   Mnemonic,
@@ -930,6 +931,67 @@ export class KeyRing {
       return {
         error: error.message
       };
+    }
+  }
+
+  public async signWithEddsaPrivKey(
+    chainId: string,
+    signMessage: object
+  ): Promise<object> {
+    try {
+      if (this.status !== KeyRingStatus.UNLOCKED) {
+        throw new Error('Key ring is not unlocked');
+      }
+
+      if (!this.keyStore) {
+        throw new Error('Key Store is empty');
+      }
+
+      const coinType = this.computeKeyStoreCoinType(chainId, 60);
+      if (coinType !== 60) {
+        throw new Error(
+          'Invalid coin type passed in to Ethereum signing (expected 60)'
+        );
+      }
+
+      const eddsa = await buildEddsa();
+      const babyJubjub = await buildBabyjub();
+      const ecdsaPrivateKey = this.loadPrivKey(coinType).toBytes();
+      // console.log("PRIVATE KEY:", Buffer.from(ecdsaPrivateKey).toString('base64'));
+      const eddsaKeyPair = await this.computeEddsaKeyPair(eddsa, Buffer.from(ecdsaPrivateKey).toString('base64'));
+      // console.log("KEY PAIR: ", eddsaKeyPair);
+
+      const F = babyJubjub.F;
+      const messageInt = parseInt(Buffer.from(btoa(JSON.stringify(signMessage)), 'base64').join(""));
+      const message = F.e(messageInt);
+      const signature = eddsa.signPoseidon((eddsaKeyPair as any).eddsaPrivateKey, message);
+      // console.log("R8x: ", F.toObject(signature.R8[0]).toString(16));
+      // console.log("R8y: ", F.toObject(signature.R8[1]).toString(16));
+      // console.log("S: ", signature.S.toString(16));
+
+      // const verifyPoseidon = eddsa.verifyPoseidon(message, signature, (eddsaKeyPair as any).eddsaPublicKey)
+      // console.log(verifyPoseidon,'VERIFY POSEIDON')
+
+      return { signature, pub_key: (eddsaKeyPair as any).eddsaPublicKey };
+
+    } catch (error) {
+      console.log(error, 'ERROR ON SIGN WITH EDDSA PRIVKEY');
+    }
+  }
+
+  async computeEddsaKeyPair(
+    eddsa: any,
+    ecdsaPrivateKey: string
+  ): Promise<object> {
+    try {
+      const eddsaPrivateKey = sha256.x2(ecdsaPrivateKey);
+      const eddsaPublicKey = eddsa.prv2pub(eddsaPrivateKey);
+      return {
+        eddsaPrivateKey,
+        eddsaPublicKey
+      }
+    } catch (error) {
+      console.log(error, 'ERROR ON ETHEREUM ARBITRARY');
     }
   }
 

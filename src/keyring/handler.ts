@@ -28,7 +28,8 @@ import {
   RequestSignDecryptDataMsg,
   RequestPublicKeyMsg,
   ChangeChainMsg,
-  RequestSignEthereumArbitraryMsg
+  RequestSignEthereumArbitraryMsg,
+  RequestSignWithEddsaPrivKeyMsg
 } from './messages';
 import { KeyRingService } from './service';
 import { Bech32Address, cosmos } from '@owallet/cosmos';
@@ -121,6 +122,11 @@ export const getHandler: (service: KeyRingService) => Handler = (
         return handleRequestSignEthereumArbitrary(service)(
           env,
           msg as RequestSignEthereumArbitraryMsg
+        );
+      case RequestSignWithEddsaPrivKeyMsg:
+        return handleRequestSignWithEddsaPrivKey(service)(
+          env,
+          msg as RequestSignWithEddsaPrivKeyMsg
         );
       case GetMultiKeyStoreInfoMsg:
         return handleGetMultiKeyStoreInfoMsg(service)(
@@ -449,6 +455,19 @@ const handleRequestSignEthereumArbitrary: (
 ) => InternalHandler<RequestSignEthereumArbitraryMsg> = (service) => {
   return async (env, msg) => {
     const response = await service.requestSignEthereumArbitrary(
+      env,
+      msg.chainId,
+      msg.data
+    );
+    return { result: JSON.stringify(response) };
+  };
+};
+
+const handleRequestSignWithEddsaPrivKey: (
+  service: KeyRingService
+) => InternalHandler<RequestSignEthereumArbitraryMsg> = (service) => {
+  return async (env, msg) => {
+    const response = await service.requestSignWithEddsaPrivKey(
       env,
       msg.chainId,
       msg.data
