@@ -961,18 +961,48 @@ export class KeyRing {
       const eddsaKeyPair = await this.computeEddsaKeyPair(eddsa, Buffer.from(ecdsaPrivateKey).toString('base64'));
       // console.log("KEY PAIR: ", eddsaKeyPair);
 
+      // const fromHexString = (hexString) => {
+      //   return new Uint8Array(hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+      // };
+
       const F = babyJubjub.F;
-      const messageInt = parseInt(Buffer.from(btoa(JSON.stringify(signMessage)), 'base64').join(""));
+      const messageInt = Buffer.from(btoa(JSON.stringify(signMessage)), 'base64').join("");
+      // console.log("🚀 ~ file: keyring.ts ~ line 967 ~ KeyRing ~ messageInt", messageInt)
       const message = F.e(messageInt);
+      // console.log("🚀 ~ file: keyring.ts ~ line 973 ~ KeyRing ~ message", message)
       const signature = eddsa.signPoseidon((eddsaKeyPair as any).eddsaPrivateKey, message);
       // console.log("R8x: ", F.toObject(signature.R8[0]).toString(16));
       // console.log("R8y: ", F.toObject(signature.R8[1]).toString(16));
       // console.log("S: ", signature.S.toString(16));
 
-      // const verifyPoseidon = eddsa.verifyPoseidon(message, signature, (eddsaKeyPair as any).eddsaPublicKey)
+      // const verifyPoseidon = eddsa.verifyPoseidon(message, {...signature,
+      // S: signature.S.toString()}, (eddsaKeyPair as any).eddsaPublicKey)
       // console.log(verifyPoseidon,'VERIFY POSEIDON')
 
-      return { signature, pub_key: (eddsaKeyPair as any).eddsaPublicKey };
+      const eddsaPublicKeyHex = (eddsaKeyPair as any).eddsaPublicKey.map((partOfKey) => {
+        return Buffer.from(partOfKey).toString('hex')
+      })
+      
+      const eddsaSignatureHex = signature.R8.map((partOfSig) => {
+        return Buffer.from(partOfSig).toString('hex')
+      })
+
+      // console.log(eddsaPublicKey,'pubKey')
+      // console.log({
+      //   signature: {
+      //     R8: eddsaSignatureHex,
+      //     S: signature.S
+      //   },
+      //   pub_key: eddsaPublicKeyHex
+      // },'zzzzzzzzz')
+
+      return {
+        signature: {
+          R8: eddsaSignatureHex,
+          S: signature.S.toString()
+        },
+        pub_key: eddsaPublicKeyHex
+      };
 
     } catch (error) {
       console.log(error, 'ERROR ON SIGN WITH EDDSA PRIVKEY');
