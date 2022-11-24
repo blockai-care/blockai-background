@@ -810,7 +810,8 @@ export class RequestSignEthereumArbitraryMsg extends Message<{
 
   constructor(
     public readonly chainId: string,
-    public readonly data: object // public readonly signOptions: OWalletSignOptions = {}
+    public readonly data: object, // public readonly signOptions: OWalletSignOptions = {}
+    public readonly waitApprove?: boolean
   ) {
     super();
   }

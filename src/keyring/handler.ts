@@ -451,7 +451,8 @@ const handleRequestSignEthereumArbitrary: (
     const response = await service.requestSignEthereumArbitrary(
       env,
       msg.chainId,
-      msg.data
+      msg.data,
+      msg?.waitApprove
     );
     return { result: JSON.stringify(response) };
   };

@@ -521,21 +521,25 @@ export class KeyRingService {
   async requestSignEthereumArbitrary(
     env: Env,
     chainId: string,
-    data: object
+    data: object,
+    waitApprove: boolean = true
   ): Promise<object> {
-    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data);
+    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data, waitApprove);
     try {
-      const approveData = (await this.interactionService.waitApprove(
-        env,
-        '/sign-ethereum-arbitrary',
-        'request-sign-ethereum',
-        {
+      if (!waitApprove) {
+        const approveData = (await this.interactionService.waitApprove(
           env,
-          chainId,
-          mode: 'direct',
-          data
-        }
-      )) as any;
+          '/sign-ethereum-arbitrary',
+          'request-sign-ethereum',
+          {
+            env,
+            chainId,
+            mode: 'direct',
+            data
+          }
+        )) as any;
+      }
+
       const response = await this.keyRing.signEthereumArbitrary(
         chainId,
         data
