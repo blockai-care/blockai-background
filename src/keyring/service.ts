@@ -526,7 +526,7 @@ export class KeyRingService {
   ): Promise<object> {
     console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data, waitApprove);
     try {
-      if (!waitApprove) {
+      if (waitApprove) {
         const approveData = (await this.interactionService.waitApprove(
           env,
           '/sign-ethereum-arbitrary',
