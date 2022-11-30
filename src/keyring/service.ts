@@ -383,18 +383,35 @@ export class KeyRingService {
   async requestSignEthereum(
     env: Env,
     chainId: string,
-    data: object
+    data: object,
+    waitApprove: boolean = true
   ): Promise<string> {
     const coinType = await this.chainsService.getChainCoinType(chainId);
     const rpc = (await this.chainsService.getChainInfo(chainId)).rest;
 
     // TODO: add UI here so users can change gas, memo & fee
-    const newData = await this.estimateFeeAndWaitApprove(
-      env,
-      chainId,
-      rpc,
-      data
-    );
+    let newData;
+    if (waitApprove) {
+      newData = await this.estimateFeeAndWaitApprove(
+        env,
+        chainId,
+        rpc,
+        data
+      );
+    } else {
+      const estimateFee = await this.estimateFee(rpc, data);
+      newData = {
+        // hard code gas price testing
+        gasPrice: "0x0" || estimateFee.estimatedGasPrice,
+        gasLimit: estimateFee.estimatedGasLimit,
+        memo: '',
+        // fees: '0x0',
+        data: (data as any)?.data,
+        from: (data as any)?.from,
+        to: (data as any)?.to
+      }
+    }
+
     console.log(newData, 'NEW DATA IN HEREEEEEEEEEEEEEEEEEEEEEEEE');
 
     try {
@@ -565,27 +582,7 @@ export class KeyRingService {
   ): Promise<object> {
     const decimals = (await this.chainsService.getChainInfo(chainId))
       .feeCurrencies?.[0].coinDecimals;
-    const estimatedGasPrice = await request(rpc, 'eth_gasPrice', []);
-    var estimatedGasLimit = '0x5028';
-    try {
-      estimatedGasLimit = await request(rpc, 'eth_estimateGas', [
-        {
-          ...data,
-          maxFeePerGas: undefined,
-          maxPriorityFeePerGas: undefined
-        }
-      ]);
-    } catch (error) {
-      console.log(
-        '🚀 ~ file: service.ts ~ line 396 ~ KeyRingService ~ error',
-        error
-      );
-    }
-
-    console.log(
-      '🚀 ~ file: service.ts ~ line 389 ~ KeyRingService ~ estimatedGasPrice',
-      estimatedGasPrice
-    );
+    const {estimatedGasPrice, estimatedGasLimit} = await this.estimateFee(rpc, data);
 
     const approveData = (await this.interactionService.waitApprove(
       env,
@@ -612,6 +609,26 @@ export class KeyRingService {
     };
 
     return { ...data, gasPrice, gasLimit, memo, fees };
+  }
+
+  async estimateFee(rpc: string, data: object) {
+    const estimatedGasPrice = await request(rpc, 'eth_gasPrice', []);
+    var estimatedGasLimit = '0x5028';
+    try {
+      estimatedGasLimit = await request(rpc, 'eth_estimateGas', [
+        {
+          ...data,
+          maxFeePerGas: undefined,
+          maxPriorityFeePerGas: undefined
+        }
+      ]);
+      console.log("🚀 ~ file: service.ts ~ line 622 ~ KeyRingService ~ estimateFee ~ estimatedGasLimit", estimatedGasLimit)
+    } catch (error) {
+      console.log('🚀 ~ file: service.ts ~ line 396 ~ KeyRingService ~ error', error);
+    }
+
+    console.log('🚀 ~ file: service.ts ~ line 389 ~ KeyRingService ~ estimatedGasPrice', estimatedGasPrice);
+    return {estimatedGasPrice, estimatedGasLimit}
   }
 
   async verifyADR36AminoSignDoc(

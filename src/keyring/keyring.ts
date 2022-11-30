@@ -804,7 +804,7 @@ export class KeyRing {
         chainId
       };
 
-      delete finalMessage?.from;
+      // delete finalMessage?.from;
       delete finalMessage?.type;
       console.log(
         '🚀 ~ file: keyring.ts ~ line 790 ~ KeyRing ~ finalMessage',
@@ -819,6 +819,14 @@ export class KeyRing {
       const rawTxHex = '0x' + serializedTx.toString('hex');
 
       const response = await request(rpc, 'eth_sendRawTransaction', [rawTxHex]);
+
+      // console.log(new Wallet(privKey.toBytes()).privateKey,'privKey!!!!!!!')
+      // const web3 = new Web3(rpc);
+
+      // const signedTx = await web3.eth.accounts.signTransaction(finalMessage, new Wallet(privKey.toBytes()).privateKey);
+
+      // const response = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+      
       return response;
     }
   }

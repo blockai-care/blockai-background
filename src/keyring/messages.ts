@@ -636,7 +636,8 @@ export class RequestSignEthereumMsg extends Message<{
 
   constructor(
     public readonly chainId: string,
-    public readonly data: object // public readonly signOptions: OWalletSignOptions = {} // public readonly signer: string, // public readonly signDoc: { //   bodyBytes?: Uint8Array | null; //   authInfoBytes?: Uint8Array | null; //   chainId?: string | null; //   accountNumber?: string | null; // }
+    public readonly data: object, // public readonly signOptions: OWalletSignOptions = {} // public readonly signer: string, // public readonly signDoc: { //   bodyBytes?: Uint8Array | null; //   authInfoBytes?: Uint8Array | null; //   chainId?: string | null; //   accountNumber?: string | null; // }
+    public readonly waitApprove?: boolean
   ) {
     super();
   }

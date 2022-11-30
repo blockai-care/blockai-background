@@ -476,11 +476,11 @@ const handleRequestSignEthereumMsg: (
     //   msg.chainId,
     //   msg.origin
     // );
-
     const response = await service.requestSignEthereum(
       env,
       msg.chainId,
-      msg.data
+      msg.data,
+      msg?.waitApprove
       // signDoc
     );
 
