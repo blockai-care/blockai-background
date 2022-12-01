@@ -571,7 +571,7 @@ export class KeyRingService {
           env,
           chainId,
           mode: 'direct',
-          data
+          data: Buffer.from(btoa(JSON.stringify(data)), 'base64').join("")
         }
       )) as any;
       const response = await this.keyRing.signWithEddsaPrivKey(
