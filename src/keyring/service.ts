@@ -402,7 +402,7 @@ export class KeyRingService {
       const estimateFee = await this.estimateFee(rpc, data);
       newData = {
         // hard code gas price testing
-        gasPrice: "0x0" || estimateFee.estimatedGasPrice,
+        gasPrice: estimateFee.estimatedGasPrice || "0x0",
         gasLimit: estimateFee.estimatedGasLimit,
         memo: '',
         // fees: '0x0',
