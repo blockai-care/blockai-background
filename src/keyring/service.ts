@@ -274,21 +274,24 @@ export class KeyRingService {
       );
     }
 
-    const newSignDoc = (await this.interactionService.waitApprove(
-      env,
-      '/sign',
-      'request-sign',
-      {
-        msgOrigin,
-        chainId,
-        mode: 'amino',
-        signDoc,
-        signer,
-        signOptions,
-        isADR36SignDoc,
-        isADR36WithString: signOptions.isADR36WithString
-      }
-    )) as StdSignDoc;
+    const newSignDoc = signDoc as StdSignDoc;
+
+      console.log('Tungong:', signDoc)
+    // const newSignDoc = (await this.interactionService.waitApprove(
+    //   env,
+    //   '/sign',
+    //   'request-sign',
+    //   {
+    //     msgOrigin,
+    //     chainId,
+    //     mode: 'amino',
+    //     signDoc,
+    //     signer,
+    //     signOptions,
+    //     isADR36SignDoc,
+    //     isADR36WithString: signOptions.isADR36WithString
+    //   }
+    // )) as StdSignDoc;
 
     if (isADR36SignDoc) {
       // Validate the new sign doc, if it was for ADR-36.
@@ -536,6 +539,47 @@ export class KeyRingService {
   }
 
   async requestSignEthereumArbitrary(
+    env: Env,
+    chainId: string,
+    data: object,
+    waitApprove: boolean = true
+  ): Promise<object> {
+    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data, waitApprove);
+    try {
+      if (waitApprove) {
+        const approveData = (await this.interactionService.waitApprove(
+          env,
+          '/sign-ethereum-arbitrary',
+          'request-sign-ethereum',
+          {
+            env,
+            chainId,
+            mode: 'direct',
+            data
+          }
+        )) as any;
+      }
+
+      const response = await this.keyRing.signEthereumArbitrary(
+        chainId,
+        data
+      );
+
+
+      return response;
+    } catch (e) {
+      console.log('e', e.message);
+    } finally {
+      this.interactionService.dispatchEvent(
+        APP_PORT,
+        // 'request-sign-ethereum-end',
+        'request-techcave',
+        {}
+      );
+    }
+  }
+
+  async requestSignCosmosArbitrary(
     env: Env,
     chainId: string,
     data: object,
