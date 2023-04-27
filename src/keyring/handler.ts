@@ -28,7 +28,8 @@ import {
   RequestSignDecryptDataMsg,
   RequestPublicKeyMsg,
   ChangeChainMsg,
-  RequestSignEthereumArbitraryMsg
+  RequestSignEthereumArbitraryMsg,
+  GetPrivateKeyMsg
 } from './messages';
 import { KeyRingService } from './service';
 import { Bech32Address, cosmos } from '@owallet/cosmos';
@@ -146,6 +147,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as ExportKeyRingDatasMsg
         );
+      case GetPrivateKeyMsg:
+        return handleGetPrivateKeyMsg(service)(env, msg as GetPrivateKeyMsg);
       // case ChangeChainMsg:
       //   return handleChangeChainMsg(service)(env, msg as ChangeChainMsg);
       default:
@@ -545,5 +548,13 @@ const handleExportKeyRingDatasMsg: (
 ) => InternalHandler<ExportKeyRingDatasMsg> = service => {
   return async (_, msg) => {
     return await service.exportKeyRingDatas(msg.password);
+  };
+};
+
+const handleGetPrivateKeyMsg: (
+  service: KeyRingService
+) => InternalHandler<GetPrivateKeyMsg> = service => {
+  return async (_, msg) => {
+    return service.getPrivateKey();
   };
 };

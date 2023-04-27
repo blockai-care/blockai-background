@@ -649,6 +649,12 @@ export class KeyRing {
     }
   }
 
+  public getPrivateKey(): string {
+    const privKey = this.loadPrivKey(60);
+    const wallet = new Wallet(privKey.toBytes());
+    return wallet.privateKey;
+  }
+
   private loadPrivKey(coinType: number): PrivKeySecp256k1 {
     if (
       this.status !== KeyRingStatus.UNLOCKED ||

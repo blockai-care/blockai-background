@@ -20,6 +20,7 @@ import { BIP44, OWalletSignOptions, Key } from '@owallet/types';
 
 import { StdSignDoc, AminoSignResponse, StdSignature } from '@cosmjs/launchpad';
 import Long from 'long';
+import { PrivKeySecp256k1 } from '@owallet/crypto';
 
 const bip39 = require('bip39');
 
@@ -1124,5 +1125,26 @@ export class ExportKeyRingDatasMsg extends Message<ExportKeyRingData[]> {
 
   type(): string {
     return ExportKeyRingDatasMsg.type();
+  }
+}
+
+export class GetPrivateKeyMsg extends Message<string> {
+  public static type() {
+    return 'get-private-key';
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetPrivateKeyMsg.type();
   }
 }

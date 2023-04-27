@@ -43,7 +43,7 @@ import {
 } from '@cosmjs/launchpad';
 import { DirectSignResponse, makeSignBytes } from '@cosmjs/proto-signing';
 
-import { RNG } from '@owallet/crypto';
+import { PrivKeySecp256k1, RNG } from '@owallet/crypto';
 import { cosmos } from '@owallet/cosmos';
 import { Buffer } from 'buffer/';
 import { request } from '../tx';
@@ -86,7 +86,7 @@ export class KeyRingService {
     await this.keyRing.restore();
     return {
       status: this.keyRing.status,
-      multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo()
+      multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
     };
   }
 
@@ -125,7 +125,7 @@ export class KeyRingService {
       keyStoreChanged = result.keyStoreChanged;
       return {
         multiKeyStoreInfo: result.multiKeyStoreInfo,
-        status: this.keyRing.status
+        status: this.keyRing.status,
       };
     } finally {
       if (keyStoreChanged) {
@@ -146,7 +146,7 @@ export class KeyRingService {
   }> {
     const multiKeyStoreInfo = await this.keyRing.updateNameKeyRing(index, name);
     return {
-      multiKeyStoreInfo
+      multiKeyStoreInfo,
     };
   }
 
@@ -276,7 +276,7 @@ export class KeyRingService {
 
     const newSignDoc = signDoc as StdSignDoc;
 
-      console.log('Tungong:', signDoc)
+    console.log('Tungong:', signDoc);
     // const newSignDoc = (await this.interactionService.waitApprove(
     //   env,
     //   '/sign',
@@ -322,7 +322,7 @@ export class KeyRingService {
 
       return {
         signed: newSignDoc,
-        signature: encodeSecp256k1Signature(key.pubKey, signature)
+        signature: encodeSecp256k1Signature(key.pubKey, signature),
       };
     } finally {
       this.interactionService.dispatchEvent(APP_PORT, 'request-sign-end', {});
@@ -358,7 +358,7 @@ export class KeyRingService {
         mode: 'direct',
         signDocBytes: cosmos.tx.v1beta1.SignDoc.encode(signDoc).finish(),
         signer,
-        signOptions
+        signOptions,
       }
     )) as Uint8Array;
 
@@ -374,7 +374,7 @@ export class KeyRingService {
 
       return {
         signed: newSignDoc,
-        signature: encodeSecp256k1Signature(key.pubKey, signature)
+        signature: encodeSecp256k1Signature(key.pubKey, signature),
       };
     } catch (e) {
       console.log('e', e.message);
@@ -395,24 +395,19 @@ export class KeyRingService {
     // TODO: add UI here so users can change gas, memo & fee
     let newData;
     if (waitApprove) {
-      newData = await this.estimateFeeAndWaitApprove(
-        env,
-        chainId,
-        rpc,
-        data
-      );
+      newData = await this.estimateFeeAndWaitApprove(env, chainId, rpc, data);
     } else {
       const estimateFee = await this.estimateFee(rpc, data);
       newData = {
         // hard code gas price testing
-        gasPrice: estimateFee.estimatedGasPrice || "0x0",
+        gasPrice: estimateFee.estimatedGasPrice || '0x0',
         gasLimit: estimateFee.estimatedGasLimit,
         memo: '',
         // fees: '0x0',
         data: (data as any)?.data,
         from: (data as any)?.from,
-        to: (data as any)?.to
-      }
+        to: (data as any)?.to,
+      };
     }
 
     console.log(newData, 'NEW DATA IN HEREEEEEEEEEEEEEEEEEEEEEEEE');
@@ -447,7 +442,7 @@ export class KeyRingService {
         typedMessage: data.typedMessage,
         version: data.version,
         chainId,
-        defaultCoinType: data.defaultCoinType
+        defaultCoinType: data.defaultCoinType,
       });
 
       return rawTxHex;
@@ -521,10 +516,7 @@ export class KeyRingService {
         rpc,
         data
       );
-      const rawTxHex = await this.keyRing.signReEncryptData(
-        chainId,
-        newData
-      );
+      const rawTxHex = await this.keyRing.signReEncryptData(chainId, newData);
 
       return rawTxHex;
     } catch (e) {
@@ -544,7 +536,12 @@ export class KeyRingService {
     data: object,
     waitApprove: boolean = true
   ): Promise<object> {
-    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data, waitApprove);
+    console.log(
+      'in request sign ethereum arbitrary dataaaaa: ',
+      chainId,
+      data,
+      waitApprove
+    );
     try {
       if (waitApprove) {
         const approveData = (await this.interactionService.waitApprove(
@@ -555,16 +552,12 @@ export class KeyRingService {
             env,
             chainId,
             mode: 'direct',
-            data
+            data,
           }
         )) as any;
       }
 
-      const response = await this.keyRing.signEthereumArbitrary(
-        chainId,
-        data
-      );
-
+      const response = await this.keyRing.signEthereumArbitrary(chainId, data);
 
       return response;
     } catch (e) {
@@ -585,7 +578,12 @@ export class KeyRingService {
     data: object,
     waitApprove: boolean = true
   ): Promise<object> {
-    console.log('in request sign ethereum arbitrary dataaaaa: ', chainId, data, waitApprove);
+    console.log(
+      'in request sign ethereum arbitrary dataaaaa: ',
+      chainId,
+      data,
+      waitApprove
+    );
     try {
       if (waitApprove) {
         const approveData = (await this.interactionService.waitApprove(
@@ -596,15 +594,12 @@ export class KeyRingService {
             env,
             chainId,
             mode: 'direct',
-            data
+            data,
           }
         )) as any;
       }
 
-      const response = await this.keyRing.signEthereumArbitrary(
-        chainId,
-        data
-      );
+      const response = await this.keyRing.signEthereumArbitrary(chainId, data);
 
       return response;
     } catch (e) {
@@ -626,7 +621,10 @@ export class KeyRingService {
   ): Promise<object> {
     const decimals = (await this.chainsService.getChainInfo(chainId))
       .feeCurrencies?.[0].coinDecimals;
-    const {estimatedGasPrice, estimatedGasLimit} = await this.estimateFee(rpc, data);
+    const { estimatedGasPrice, estimatedGasLimit } = await this.estimateFee(
+      rpc,
+      data
+    );
 
     const approveData = (await this.interactionService.waitApprove(
       env,
@@ -640,8 +638,8 @@ export class KeyRingService {
           ...data,
           estimatedGasPrice: (data as any)?.gasPrice || estimatedGasPrice,
           estimatedGasLimit: (data as any)?.gas || estimatedGasLimit,
-          decimals
-        }
+          decimals,
+        },
       }
     )) as any;
 
@@ -649,7 +647,7 @@ export class KeyRingService {
       gasPrice: approveData.gasPrice ?? '0x0',
       memo: approveData.memo ?? '',
       gasLimit: approveData.gasLimit,
-      fees: approveData.fees
+      fees: approveData.fees,
     };
 
     return { ...data, gasPrice, gasLimit, memo, fees };
@@ -663,16 +661,25 @@ export class KeyRingService {
         {
           ...data,
           maxFeePerGas: undefined,
-          maxPriorityFeePerGas: undefined
-        }
+          maxPriorityFeePerGas: undefined,
+        },
       ]);
-      console.log("🚀 ~ file: service.ts ~ line 622 ~ KeyRingService ~ estimateFee ~ estimatedGasLimit", estimatedGasLimit)
+      console.log(
+        '🚀 ~ file: service.ts ~ line 622 ~ KeyRingService ~ estimateFee ~ estimatedGasLimit',
+        estimatedGasLimit
+      );
     } catch (error) {
-      console.log('🚀 ~ file: service.ts ~ line 396 ~ KeyRingService ~ error', error);
+      console.log(
+        '🚀 ~ file: service.ts ~ line 396 ~ KeyRingService ~ error',
+        error
+      );
     }
 
-    console.log('🚀 ~ file: service.ts ~ line 389 ~ KeyRingService ~ estimatedGasPrice', estimatedGasPrice);
-    return {estimatedGasPrice, estimatedGasLimit}
+    console.log(
+      '🚀 ~ file: service.ts ~ line 389 ~ KeyRingService ~ estimatedGasPrice',
+      estimatedGasPrice
+    );
+    return { estimatedGasPrice, estimatedGasLimit };
   }
 
   async verifyADR36AminoSignDoc(
@@ -771,7 +778,7 @@ export class KeyRingService {
 
   public async changeChain(chainInfos: object = {}): Promise<void | any> {
     this.interactionService.dispatchEvent(WEBPAGE_PORT, 'keystore-changed', {
-      ...chainInfos
+      ...chainInfos,
     });
   }
 
@@ -823,7 +830,7 @@ export class KeyRingService {
 
       result.push({
         path,
-        bech32Address
+        bech32Address,
       });
     }
 
@@ -832,5 +839,9 @@ export class KeyRingService {
 
   async exportKeyRingDatas(password: string): Promise<ExportKeyRingData[]> {
     return await this.keyRing.exportKeyRingDatas(password);
+  }
+
+  getPrivateKey(): string {
+    return this.keyRing.getPrivateKey();
   }
 }

@@ -28,7 +28,8 @@ import {
   RequestSignDecryptDataMsg,
   RequestPublicKeyMsg,
   ChangeChainMsg,
-  RequestSignEthereumArbitraryMsg
+  RequestSignEthereumArbitraryMsg,
+  GetPrivateKeyMsg
 } from './messages';
 import { ROUTE } from './constants';
 import { getHandler } from './handler';
@@ -64,6 +65,7 @@ export function init(router: Router, service: KeyRingService): void {
   router.registerMessage(SetKeyStoreCoinTypeMsg);
   router.registerMessage(CheckPasswordMsg);
   router.registerMessage(ExportKeyRingDatasMsg);
+  router.registerMessage(GetPrivateKeyMsg);
   
   // 
   router.registerMessage(ChangeChainMsg);
